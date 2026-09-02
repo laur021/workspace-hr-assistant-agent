@@ -27,6 +27,7 @@ const LOCATION = {
 const HR_DRAFTS = '-1003702195046';      // HR Weather Drafts (supergroup)
 const ABC_EMPLOYEES = '-1004452958432';  // ABC Employee Announcement (supergroup)
 const SEND_THRESHOLD = 2;             // advisory fires when severity >= 2
+const PAGASA_NCR_URL = 'https://www.pagasa.dost.gov.ph/regional-forecast/ncrprsd';
 
 // WMO weather code -> [description, base severity]
 const WMO = {
@@ -80,7 +81,7 @@ function defaultState() {
 
 function readState() {
   try {
-    return JSON.parse(readFileSync(STATE_PATH, 'utf8'));
+    return JSON.parse(readFileSync(STATE_PATH, 'utf8').replace(/^\uFEFF/, ''));
   } catch {
     return defaultState();
   }
@@ -122,6 +123,8 @@ async function fetchWeather() {
     Number(d.wind_gusts_10m_max?.[0] || 0),
   );
 
+  const pagasa = await fetchPagasaNcr();
+
   return {
     ok: true,
     location: LOCATION.name,
@@ -148,7 +151,41 @@ async function fetchWeather() {
     severity,
     recommendation: recommendation(severity),
     storm: null, // reserved: named-storm detection (best-effort, v2)
+    pagasa,
   };
+}
+
+function normalizePageText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function fetchPagasaNcr() {
+  try {
+    const res = await fetch(PAGASA_NCR_URL, {
+      headers: { 'user-agent': 'AblazeHRAssistantBot/1.0 weather advisory check' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) return { status: 'unavailable', source: PAGASA_NCR_URL };
+    const text = normalizePageText(await res.text());
+    const advisory = text.match(/Thunderstorm Advisory No\.\s*\d+[^]{0,1500}?Issued at:\s*([^]+?)(?=The above conditions|All are advised|Keep monitoring|Thunderstorm Advisory No\.|Thunderstorm Watch|$)/i);
+    if (advisory && /Metro Manila/i.test(advisory[0])) {
+      const summary = advisory[0].replace(/\s+/g, ' ').trim().slice(0, 700);
+      return { status: 'active', source: PAGASA_NCR_URL, summary };
+    }
+    if (/no Thunderstorm Advisory Issued/i.test(text)) {
+      return { status: 'none', source: PAGASA_NCR_URL };
+    }
+    return { status: 'unverified', source: PAGASA_NCR_URL };
+  } catch {
+    return { status: 'unavailable', source: PAGASA_NCR_URL };
+  }
 }
 
 function computeSeverity(code, wind, gust, precipToday, forecastCode, gustMax) {
@@ -200,6 +237,9 @@ function buildAdvisoryText(w) {
   }
   lines.push(`Rain today: ${f.precip_today_mm} mm`);
   if (w.storm) lines.push(`Storm: ${w.storm}`);
+  if (w.pagasa?.status === 'active') lines.push(`PAGASA NCR advisory: ${w.pagasa.summary}`);
+  else if (w.pagasa?.status === 'none') lines.push('PAGASA NCR advisory: No active thunderstorm advisory found in this check.');
+  else lines.push('PAGASA NCR advisory: No verified PAGASA advisory available from this check.');
   lines.push('');
   lines.push(w.recommendation);
   lines.push('');

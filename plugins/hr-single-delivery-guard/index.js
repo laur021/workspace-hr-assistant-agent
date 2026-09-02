@@ -32,6 +32,33 @@ function forecastDescription(code) {
   return 'unsettled weather';
 }
 
+function readWorkflowState() {
+  // PowerShell writes may prepend a UTF-8 BOM. JSON.parse does not accept it,
+  // so normalize it at the workflow boundary rather than failing after an
+  // advisory has already been delivered.
+  return JSON.parse(readFileSync(STATE_PATH, 'utf8').replace(/^\uFEFF/, ''));
+}
+
+function writeWorkflowState(state) {
+  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
+}
+
+async function sendOutbox(text, buttons = []) {
+  writeFileSync(OUTBOX_PATH, JSON.stringify({
+    target: HR_DRAFTS,
+    text,
+    buttons,
+  }) + '\n', 'utf8');
+  await runNode(SEND_SCRIPT);
+}
+
+function normalizeRevision(text) {
+  return text
+    .replace(/\r\n?/g, '\n')
+    .replace(/^\s*regards\s*,\s*$/im, 'Regards,')
+    .trim();
+}
+
 function buildAdvisory(weather) {
   const current = weather.current;
   const forecast = weather.forecast;
@@ -50,11 +77,18 @@ function buildAdvisory(weather) {
   const recommendation = severe
     ? 'Work from home where possible; non-essential travel discouraged; dress down in casual, safe attire'
     : String(weather.recommendation || 'Take appropriate precautions when travelling.');
+  const pagasaLine = weather.pagasa?.status === 'active'
+    ? `PAGASA NCR advisory: ${weather.pagasa.summary}`
+    : weather.pagasa?.status === 'none'
+      ? 'PAGASA NCR advisory: No active thunderstorm advisory found in this check.'
+      : 'PAGASA NCR advisory: No verified PAGASA advisory available from this check.';
 
   return [
     `⚠️ Weather Update — Metro Manila (${formatDate(weather.localDate)})`,
     '',
     `We are currently experiencing ${condition.toLowerCase()} in the Metro Manila area, with temperatures around ${temp}°C (feels like ${feels}°C) and humidity at ${humidity}%. Winds are blowing at approximately ${wind} km/h, with gusts reaching up to ${gust} km/h. About ${rain} mm of rainfall is expected today, and gusts up to ${maxGust} km/h may develop as the day progresses.`,
+    '',
+    pagasaLine,
     '',
     'Current Status:',
     `• Condition: ${condition}${forecastText === 'thunderstorms' ? ', with heavier rain and thunderstorms expected later today' : ''}`,
@@ -115,15 +149,22 @@ function buildDraft(weather) {
   const date = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Manila', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   }).format(new Date(`${weather.localDate}T12:00:00+08:00`));
+  const forecastText = forecastDescription(forecast.today_code);
+  const weatherLabel = Number(weather.severity) >= 3 ? 'severe weather conditions' : 'adverse weather conditions';
+  const pagasaNote = weather.pagasa?.status === 'active'
+    ? `PAGASA NCR has issued the following relevant advisory: ${weather.pagasa.summary}`
+    : 'No verified PAGASA advisory was available from this automated check.';
 
   return [
     'ADVISORY: Weather Update and Dress-Down Recommendation — Metro Manila',
     '',
     'Good day, ABC team.',
     '',
-    `As of ${date}, Metro Manila is experiencing ${String(current.condition).toLowerCase()}. Current conditions are ${temp}°C (feels like ${feels}°C), with ${humidity}% humidity. Winds are approximately ${wind} km/h, with gusts up to ${gust} km/h. Today’s forecast calls for thunderstorms, around ${rain} mm of rain, gusts up to ${maxGust} km/h, and temperatures from ${low}°C to ${high}°C.`,
+    `As of ${date}, Metro Manila is experiencing ${String(current.condition).toLowerCase()}. Current conditions are ${temp}°C (feels like ${feels}°C), with ${humidity}% humidity. Winds are approximately ${wind} km/h, with gusts up to ${gust} km/h. Today’s forecast calls for ${forecastText}, around ${rain} mm of rain, gusts up to ${maxGust} km/h, and temperatures from ${low}°C to ${high}°C.`,
     '',
-    'Given these severe conditions, employees are encouraged to work from home where possible and avoid non-essential travel. Employees who need to report on-site may dress down in casual, comfortable, and weather-appropriate attire. Please allow extra travel time and take care when commuting.',
+    pagasaNote,
+    '',
+    `Given these ${weatherLabel}, employees should allow extra travel time and prioritize safety while commuting. Employees who need to report on-site may dress down in casual, comfortable, and weather-appropriate attire.`,
     '',
     'Stay safe and coordinate with your immediate supervisor regarding your schedule. Thank you for your cooperation and understanding.',
   ].join('\n');
@@ -133,24 +174,19 @@ async function runComposeDraft() {
   const report = await runNode(WEATHER_SCRIPT, ['--report']);
   const weather = JSON.parse(report);
   const draft = buildDraft(weather);
-  const state = JSON.parse(readFileSync(STATE_PATH, 'utf8'));
+  const state = readWorkflowState();
   state.draft = draft;
   state.awaitingEdit = false;
-  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
-  writeFileSync(OUTBOX_PATH, JSON.stringify({
-    target: HR_DRAFTS,
-    text: draft,
-    buttons: [
-      { label: 'Send to Employees', value: 'send_employees' },
-      { label: 'Edit', value: 'edit' },
-      { label: 'Discard', value: 'discard' },
-    ],
-  }) + '\n', 'utf8');
-  await runNode(SEND_SCRIPT);
+  writeWorkflowState(state);
+  await sendOutbox(draft, [
+    { label: 'Send to Employees', value: 'send_employees' },
+    { label: 'Edit', value: 'edit' },
+    { label: 'Discard', value: 'discard' },
+  ]);
 }
 
 async function runSendEmployees() {
-  const state = JSON.parse(readFileSync(STATE_PATH, 'utf8'));
+  const state = readWorkflowState();
   if (!state.draft) throw new Error('no employee announcement draft is available');
   writeFileSync(OUTBOX_PATH, JSON.stringify({
     target: ABC_EMPLOYEES,
@@ -161,7 +197,37 @@ async function runSendEmployees() {
   // second HR Drafts confirmation or monitoring question.
   state.draft = null;
   state.awaitingEdit = false;
-  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
+  writeWorkflowState(state);
+}
+
+async function runBeginEdit() {
+  const state = readWorkflowState();
+  if (!state.draft) return;
+  state.awaitingEdit = true;
+  writeWorkflowState(state);
+  await sendOutbox('Reply to this message with your revised announcement.');
+}
+
+async function runDiscard() {
+  const state = readWorkflowState();
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeWorkflowState(state);
+  await sendOutbox('Draft discarded.');
+}
+
+async function runRevisedDraft(revision) {
+  const draft = normalizeRevision(revision);
+  if (!draft) return;
+  const state = readWorkflowState();
+  state.draft = draft;
+  state.awaitingEdit = false;
+  writeWorkflowState(state);
+  await sendOutbox(draft, [
+    { label: 'Send to Employees', value: 'send_employees' },
+    { label: 'Edit', value: 'edit' },
+    { label: 'Discard', value: 'discard' },
+  ]);
 }
 
 export default definePluginEntry({
@@ -175,19 +241,38 @@ export default definePluginEntry({
       const isWeatherCommand = /^\/check_weather(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
       const isComposeDraft = /(?:callback_data\s*:\s*)?compose_draft\b/i.test(content);
       const isSendEmployees = /(?:callback_data\s*:\s*)?send_employees\b/i.test(content);
-      if (!isWeatherCommand && !isComposeDraft && !isSendEmployees) return;
+      const isEdit = /(?:callback_data\s*:\s*)?edit\b/i.test(content);
+      const isDiscard = /(?:callback_data\s*:\s*)?discard\b/i.test(content);
+      const isCallback = /^callback_data\s*:/i.test(content);
+      const isPlainText = Boolean(content) && !isCallback && !content.startsWith('/');
+      let isRevision = false;
+      if (isPlainText) {
+        try {
+          isRevision = readWorkflowState().awaitingEdit === true;
+        } catch {
+          isRevision = false;
+        }
+      }
+      if (!isWeatherCommand && !isComposeDraft && !isSendEmployees && !isEdit && !isDiscard && !isRevision) return;
       try {
         if (isWeatherCommand) {
           await runManualWeatherCheck();
           api.logger.info('sent the single /check_weather advisory without model dispatch');
-        } else {
-          if (isComposeDraft) {
-            await runComposeDraft();
-            api.logger.info('sent the draft preview without a redundant confirmation');
-          } else {
-            await runSendEmployees();
-            api.logger.info('sent employee announcement without a monitoring prompt');
-          }
+        } else if (isComposeDraft) {
+          await runComposeDraft();
+          api.logger.info('sent the draft preview without a redundant confirmation');
+        } else if (isSendEmployees) {
+          await runSendEmployees();
+          api.logger.info('sent employee announcement without a monitoring prompt');
+        } else if (isEdit) {
+          await runBeginEdit();
+          api.logger.info('opened edit mode without model dispatch');
+        } else if (isDiscard) {
+          await runDiscard();
+          api.logger.info('discarded draft without model dispatch');
+        } else if (isRevision) {
+          await runRevisedDraft(content);
+          api.logger.info('sent revised draft preview without a redundant confirmation');
         }
         return { handled: true };
       } catch (error) {

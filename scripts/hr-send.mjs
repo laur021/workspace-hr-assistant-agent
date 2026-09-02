@@ -21,7 +21,7 @@ function main() {
   const dryRun = argsIn.includes('--dry-run');
   const path = argsIn.find((a) => !a.startsWith('--')) || DEFAULT_PAYLOAD;
 
-  const payload = JSON.parse(readFileSync(path, 'utf8'));
+  const payload = JSON.parse(readFileSync(path, 'utf8').replace(/^\uFEFF/, ''));
   const { target, text, buttons, replyTo } = payload;
 
   const cliArgs = [

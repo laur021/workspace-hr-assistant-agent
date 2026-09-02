@@ -11,6 +11,7 @@
   "lastSentLevel": 3,
   "lastSentAt": "2026-09-02T01:33:07.518Z",
   "lastAdvisoryMessageId": "66",
-  "draft": "ADVISORY: Weather Update and Dress-Down Recommendation — Metro Manila\n\nGood day, ABC team.\n\nAs of Wednesday, September 2, 2026, Metro Manila is experiencing moderate drizzle. Current conditions are 28.9°C (feels like 30.8°C), with 75% humidity. Winds are approximately 33 km/h, with gusts up to 85.3 km/h. Today’s forecast calls for thunderstorms, around 17.5 mm of rain, gusts up to 85.3 km/h, and temperatures from 25.5°C to 30°C.\n\nGiven these severe conditions, employees are encouraged to work from home where possible and avoid non-essential travel. Employees who need to report on-site may dress down in casual, comfortable, and weather-appropriate attire. Please allow extra travel time and take care when commuting.\n\nStay safe and coordinate with your immediate supervisor regarding your schedule. Thank you for your cooperation and understanding.",
-  "awaitingEdit": false
+  "draft": "ADVISORY: Weather Update and Dress-Down Recommendation — Metro Manila\n\nGood day, ABC team.\n\nAs of Wednesday, September 2, 2026, Metro Manila is experiencing light drizzle. Current conditions are 28°C (feels like 29.7°C), with 80% humidity. Winds are approximately 31.1 km/h, with gusts up to 73.8 km/h. Today’s forecast calls for unsettled weather, around 11.6 mm of rain, gusts up to 78.8 km/h, and temperatures from 26.5°C to 30.3°C.\n\nNo verified PAGASA advisory was available from this automated check.\n\nGiven these adverse weather conditions, employees should allow extra travel time and prioritize safety while commuting. Employees who need to report on-site may dress down in casual, comfortable, and weather-appropriate attire.\n\nStay safe and coordinate with your immediate supervisor regarding your schedule. Thank you for your cooperation and understanding.",
+  "awaitingEdit": true,
+  "lastWeatherSignature": null
 }

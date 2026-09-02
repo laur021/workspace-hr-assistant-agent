@@ -1,0 +1,9 @@
+{
+  "target": "-1003702195046",
+  "text": "ADVISORY: Severe Weather Alert — Metro Manila\n\nGood day, ABC team.\n\nWe are issuing this advisory to keep everyone informed of the prevailing weather conditions in Metro Manila as of Wednesday morning, 2 September 2026. Current conditions show light drizzle with a temperature of 29.1°C, which feels warmer at 31.8°C due to elevated humidity of 75%. Winds are moderate at 26.3 km/h, with strong gusts reaching up to 64.8 km/h. The forecast for the remainder of the day calls for thunderstorms with an expected rainfall of 17.5 mm, wind gusts of up to 85.3 km/h, and temperatures ranging from a low of 25.5°C to a high of 30°C.\n\nGiven these severe conditions, we strongly encourage all employees to work from home where possible and to avoid non-essential travel, prioritizing personal safety at all times. For those who are required to report on-site, we recommend dressing down in casual, comfortable, and weather-appropriate attire — lightweight and breathable clothing, waterproof footwear, and an umbrella or raincoat are advised for your comfort and protection.\n\nPlease stay safe, remain updated on further advisories, and do not hesitate to coordinate with your immediate supervisor regarding your schedule. Thank you for your cooperation and understanding.",
+  "buttons": [
+    { "label": "Send to ABC Employees", "value": "send_employees" },
+    { "label": "Edit", "value": "edit" },
+    { "label": "Discard", "value": "discard" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "hr-single-delivery-guard",
+  "name": "HR Single Delivery Guard",
+  "description": "Suppresses the duplicate agent final reply after the HR weather workflow sends an outbox message.",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false
+  }
+}

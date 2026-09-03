@@ -177,7 +177,7 @@ The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the
 
 ## Earthquake Drill Announcement Workflow
 
-- `/create_earthquake_announcement` posts the generic earthquake-drill template to HR Weather Drafts with one **Compose Draft** button.
+- `/create_earthquake_draft` posts the generic earthquake-drill template to HR Weather Drafts with one **Compose Draft** button. The legacy `/create_earthquake_announcement` form remains accepted by the handler.
 - **Compose Draft** posts the employee-ready template preview with **Send to Employees**, **Edit**, and **Discard**.
 - **Send to Employees** sends the approved draft silently to ABC Employee Announcement (`-1004452958432`).
 - **Edit** asks for a revised reply, then posts the revised preview with the same three buttons. **Discard** clears the draft.
@@ -185,7 +185,7 @@ The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the
 
 ## Electrical Maintenance Announcement Workflow
 
-- `/create_maintenance_announcement` (also accepted as `/Create_Maintenance_Announcement`) posts the IBM Plaza annual electrical preventive-maintenance template to HR Weather Drafts with one `Compose Draft` button (`compose_maintenance_draft`).
+- `/create_maintenance_draft` posts a reusable annual electrical preventive-maintenance template with placeholders for event-specific details to HR Weather Drafts with one `Compose Draft` button (`compose_maintenance_draft`). The legacy `/create_maintenance_announcement` form, including mixed-case use, remains accepted by the handler.
 - Compose Draft posts the employee-ready maintenance notice with `Send to Employees` (`send_maintenance_employees`), `Edit` (`edit_maintenance`), and `Discard` (`discard_maintenance`) buttons.
 - Send to Employees sends the approved draft silently to ABC Employee Announcement (`-1004452958432`). Edit asks for a revised reply, then posts the revised preview with the same three buttons. Discard clears the draft.
 - State is stored in `state/hr-maintenance.json`; maintenance callback IDs are dedicated so this workflow cannot affect weather, holiday, or earthquake drafts.

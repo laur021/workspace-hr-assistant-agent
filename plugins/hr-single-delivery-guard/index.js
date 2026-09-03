@@ -45,26 +45,26 @@ const MAINTENANCE_ANNOUNCEMENT_TEMPLATE = [
   '',
   'Hi Everyone,',
   '',
-  'This is to inform you that IBM Plaza will be conducting its Annual Electrical Preventive Maintenance on Saturday, September 27, 2025, from 8:00 AM to 9:00 PM.',
+  'This is to inform you that [BUILDING / LOCATION] will be conducting its Annual Electrical Preventive Maintenance on [DATE], from [START TIME] to [END TIME].',
   '',
   'Please be guided by the following schedule:',
   '',
-  '8:00 AM – 10:00 AM (2 Hours) — TOTAL POWER SHUTDOWN',
-  '• No electricity on all floors from B3 to 32F.',
-  '• Elevators will not be operational during this period.',
+  '[START TIME] – [SHUTDOWN END TIME] ([DURATION]) — TOTAL POWER SHUTDOWN',
+  '• No electricity in [AFFECTED AREAS].',
+  '• [ELEVATOR AVAILABILITY / OPERATIONAL STATUS].',
   '',
-  '10:00 AM – 8:00 PM — GENERATOR POWER SUPPLY',
-  '• All floors will have electricity supplied by the building’s generator set.',
+  '[GENERATOR START TIME] – [GENERATOR END TIME] — GENERATOR POWER SUPPLY',
+  '• Electricity will be supplied by [BACKUP POWER SOURCE] in [COVERED AREAS].',
   '',
-  '8:00 PM – 9:00 PM — MINOR POWER FLUCTUATIONS EXPECTED',
-  '• Minor power fluctuations may occur during the transfer from backup power (genset) to Meralco supply.',
+  '[TRANSFER START TIME] – [TRANSFER END TIME] — MINOR POWER FLUCTUATIONS EXPECTED',
+  '• Minor power fluctuations may occur during the transfer from [BACKUP POWER SOURCE] to [UTILITY / MAIN POWER SUPPLY].',
   '',
-  'For further details, please refer to the attached circular.',
+  'For further details, please refer to [REFERENCE DOCUMENT / CIRCULAR] or contact [CONTACT PERSON / DEPARTMENT].',
   '',
   'Thank you for your kind attention and cooperation.',
   '',
   'Best Regards,',
-  'Admin Department',
+  '[SENDER / DEPARTMENT]',
 ].join('\n');
 
 function prettyNumber(value) {
@@ -568,8 +568,8 @@ export default definePluginEntry({
       const isWeatherCommand = /^\/check_weather(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
       // /check_ph_holidays is intentionally handled by the holiday agent prompt,
       // so manual checks use the same official-source verification as the schedule.
-      const isEarthquakeTemplateCommand = /^\/create_earthquake_announcement(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
-      const isMaintenanceTemplateCommand = /^\/create_maintenance_announcement(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
+      const isEarthquakeTemplateCommand = /^\/(?:create_earthquake_draft|create_earthquake_announcement)(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
+      const isMaintenanceTemplateCommand = /^\/(?:create_maintenance_draft|create_maintenance_announcement)(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
       const isComposeEarthquakeDraft = /(?:callback_data\s*:\s*)?compose_earthquake_draft\b/i.test(content);
       const isSendEarthquakeEmployees = /(?:callback_data\s*:\s*)?send_earthquake_employees\b/i.test(content);
       const isEarthquakeEdit = /(?:callback_data\s*:\s*)?edit_earthquake\b/i.test(content);

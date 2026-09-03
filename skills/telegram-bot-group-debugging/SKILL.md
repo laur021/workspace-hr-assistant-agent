@@ -29,7 +29,10 @@ Fix Telegram-bot group failures in OpenClaw: "group migrated to supergroup" send
 
 7. **Edit long automation messages via argv, not shell strings.** Passing a multi-line message to `openclaw automations edit <id> --message $msg` from PowerShell keeps only the first line (the stored message ends up ~50 chars). Write the message to a file, then apply with `spawnSync(process.execPath, [OPENCLAW_CLI, 'automations', 'edit', JOB_ID, '--message', FULL_MESSAGE], { encoding: 'utf8' })` (same `OPENCLAW_CLI` shell-free pattern as step 5). Verify persistence by parsing `openclaw automations get <id>` output: strip the UTF-8 BOM (`text.replace(/^\uFEFF/, '')`) before `JSON.parse`, then confirm the message length and expected markers.
 
+8. **Convert scripted automations to prompt-based jobs when uniformity is required.** Read the complete existing script behavior, rewrite every source, state, duplicate, delivery, button, and manual-test rule into one agent-turn prompt, then update the existing job through the shell-free argv method in step 7. Preserve the schedule and verify the stored payload kind is `agentTurn`, the prompt contains the required workflow markers, and the old script payload is gone.
+
 ## Pitfalls
 - Old chat IDs are not derivable from new ones; always read the new ID from the migration error or the session list.
 - `openclaw channels resolve` only resolves usernames for DM lookups; it cannot resolve migrated group IDs.
 - Group callbacks run in `callback-scope` mode, which skips the group allowlist but still passes `shouldSkipGroupMessage` — so the `requireMention` gate applies to callbacks too.
+- On this Windows Node runtime, do not call `process.exit()` immediately after an awaited HTTP fetch in a bot automation script; let the module return naturally, or libuv can assert after valid output and report a non-zero exit.

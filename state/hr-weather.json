@@ -6,12 +6,12 @@
     "tz": "Asia/Manila"
   },
   "sendThreshold": 2,
-  "monitoring": false,
-  "monitoringDate": "2026-09-02",
+  "monitoring": true,
+  "monitoringDate": "2026-09-03",
   "lastSentLevel": 3,
-  "lastSentAt": "2026-09-02T01:33:07.518Z",
-  "lastAdvisoryMessageId": "66",
+  "lastSentAt": "2026-09-03T01:45:19.522Z",
+  "lastAdvisoryMessageId": "257",
   "draft": null,
   "awaitingEdit": false,
-  "lastWeatherSignature": null
+  "lastWeatherSignature": "2026-09-03|thunderstorms|16.9mm|gust74.5kmh|slight-rain-showers"
 }

@@ -161,6 +161,27 @@ You operate the AblazeHRAssistantBot (Telegram account `hr-assistant`) for HR we
 
 **Rules:** professional, formal, warm but concise tone. After every button action: read state → act → write updated state. The scheduled **Weather Update** automation sends advisories using this same flow; you handle the interactive buttons/commands. The local `hr-single-delivery-guard` hook owns `/check_weather`, Compose Draft, Edit, revised text, Discard, and Send to Employees so these paths never emit a second model-generated status reply.
 
+## Philippine Public Holiday → Announcement Workflow
+
+The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the first day of every month**. It posts a monthly public-holiday planning advisory in HR Weather Drafts (`-1003702195046`) using the same outbox delivery path as weather advisories.
+
+- `/check_ph_holidays` is a manual test handled by the same holiday agent prompt and follows the exact same flow immediately; it may report the current month even if the scheduled run already sent it.
+- Every holiday must be verified against an official Philippine government source, such as the Official Gazette, a presidential proclamation, or another official government publication. Nager.Date is only a discovery/reference source. Never invent, infer, assume, or announce an unverified holiday, date, classification, or work-schedule decision. Exclude any holiday that cannot be officially verified.
+- Holiday advisory: exactly one **Compose Draft** button (`compose_holiday_draft`).
+- Compose Draft: create a formal employee-ready holiday notice in HR Drafts with **Send to Employees** (`send_holiday_employees`), **Edit** (`edit_holiday`), and **Discard** (`discard_holiday`) buttons.
+- Send to Employees: send the approved draft silently to the configured ABC Employee Announcement target (`-1004452958432`), then clear the draft.
+- Edit: ask the user to reply with the revised announcement; then show only the revised preview and the same three buttons.
+- Never generate a second status message after any holiday outbox action. The `hr-single-delivery-guard` hook owns this entire flow.
+- State is stored in `state/hr-holidays.json`; it preserves the latest report, edit status, draft, and the last month automatically sent.
+
+## Earthquake Drill Announcement Workflow
+
+- `/create_earthquake_announcement` posts the generic earthquake-drill template to HR Weather Drafts with one **Compose Draft** button.
+- **Compose Draft** posts the employee-ready template preview with **Send to Employees**, **Edit**, and **Discard**.
+- **Send to Employees** sends the approved draft silently to ABC Employee Announcement (`-1004452958432`).
+- **Edit** asks for a revised reply, then posts the revised preview with the same three buttons. **Discard** clears the draft.
+- State is stored in `state/hr-earthquake.json`; callback IDs are earthquake-specific so this workflow cannot affect weather or holiday drafts.
+
 ## Related
 
 - [Default AGENTS.md](/reference/AGENTS.default)

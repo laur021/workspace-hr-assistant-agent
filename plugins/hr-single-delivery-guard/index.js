@@ -5,11 +5,39 @@ import { definePluginEntry } from 'openclaw/plugin-sdk/plugin-entry';
 const HR_DRAFTS_SESSION = 'agent:hr-assistant-agent:telegram:group:-1003702195046';
 const WORKSPACE = 'C:\\Users\\markmb\\.openclaw\\workspace-hr-assistant-agent';
 const WEATHER_SCRIPT = `${WORKSPACE}\\scripts\\hr-weather-check.mjs`;
+const HOLIDAY_SCRIPT = `${WORKSPACE}\\scripts\\hr-holiday-check.mjs`;
 const SEND_SCRIPT = `${WORKSPACE}\\scripts\\hr-send.mjs`;
 const OUTBOX_PATH = `${WORKSPACE}\\state\\outbox.json`;
 const STATE_PATH = `${WORKSPACE}\\state\\hr-weather.json`;
+const HOLIDAY_STATE_PATH = `${WORKSPACE}\\state\\hr-holidays.json`;
+const EARTHQUAKE_STATE_PATH = `${WORKSPACE}\\state\\hr-earthquake.json`;
 const HR_DRAFTS = '-1003702195046';
 const ABC_EMPLOYEES = '-1004452958432';
+
+const EARTHQUAKE_ANNOUNCEMENT_TEMPLATE = [
+  'SUBJECT: Earthquake Drill Advisory',
+  '',
+  'Dear Colleagues,',
+  '',
+  'Please be informed that an earthquake drill is scheduled for [DATE] at [TIME].',
+  '',
+  'We would like to remind all drill participants of the following key points:',
+  '',
+  '• Elevators will be unavailable from [START TIME] to [END TIME].',
+  '• When the alarm sounds, proceed calmly to the nearest emergency exit and use the stairs to reach the ground floor.',
+  '• After reaching the ground floor, exit the building and proceed to the designated evacuation area: [EVACUATION AREA].',
+  '• Follow the instructions of the assigned safety marshals, building management, or emergency-response organizers while in the evacuation area.',
+  '• Return to work only after the drill has concluded and clearance has been given. Elevators will resume operation when safe to do so.',
+  '',
+  'Department leaders will receive the appropriate signage. Please ensure that participating team members carry the signage when proceeding to the evacuation area.',
+  '',
+  'Your support and cooperation are greatly appreciated as we continue to prioritize safety and preparedness in the workplace.',
+  '',
+  'For questions or clarifications, please contact [CONTACT PERSON / DEPARTMENT].',
+  '',
+  'Thank you and best regards,',
+  'HR Department',
+].join('\n');
 
 function prettyNumber(value) {
   const number = Number(value);
@@ -41,6 +69,27 @@ function readWorkflowState() {
 
 function writeWorkflowState(state) {
   writeFileSync(STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
+}
+
+function readHolidayState() {
+  return JSON.parse(readFileSync(HOLIDAY_STATE_PATH, 'utf8').replace(/^\uFEFF/, ''));
+}
+
+function writeHolidayState(state) {
+  writeFileSync(HOLIDAY_STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
+}
+
+function readEarthquakeState() {
+  try {
+    return JSON.parse(readFileSync(EARTHQUAKE_STATE_PATH, 'utf8').replace(/^\uFEFF/, ''));
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    return { draft: null, awaitingEdit: false };
+  }
+}
+
+function writeEarthquakeState(state) {
+  writeFileSync(EARTHQUAKE_STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
 }
 
 async function sendOutbox(text, buttons = []) {
@@ -132,6 +181,119 @@ async function runManualWeatherCheck() {
     buttons: [{ label: 'Compose Draft', value: 'compose_draft' }],
   }) + '\n', 'utf8');
   await runNode(SEND_SCRIPT);
+}
+
+function formatHolidayDate(dateString) {
+  return new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  }).format(new Date(`${dateString}T12:00:00+08:00`));
+}
+
+function buildHolidayAdvisory(report) {
+  const lines = [
+    `🇵🇭 Philippine Public Holidays — ${report.monthLabel}`,
+    '',
+    'The following national public holiday information is provided for HR planning and review:',
+    '',
+  ];
+  if (report.holidays?.length) {
+    for (const holiday of report.holidays) {
+      const type = holiday.types?.length ? ` (${holiday.types.join(', ')})` : '';
+      lines.push(`• ${formatHolidayDate(holiday.date)} — ${holiday.name}${type}`);
+    }
+  } else {
+    lines.push('• No national public holidays are listed for this month by the data source.');
+  }
+  lines.push('', 'Please confirm any work schedule, staffing, payroll, and office-operating arrangements through the appropriate HR and management process.', '', 'Would you like to compose an employee announcement?');
+  return lines.join('\n');
+}
+
+function buildHolidayDraft(report) {
+  const lines = [
+    `SUBJECT: Philippine Public Holiday Notice — ${report.monthLabel}`,
+    '',
+    'Dear ABC Employees,',
+    '',
+    `Please be informed of the following Philippine public holiday${report.holidays?.length === 1 ? '' : 's'} falling in ${report.monthLabel}:`,
+    '',
+  ];
+  if (report.holidays?.length) {
+    for (const holiday of report.holidays) lines.push(`• ${formatHolidayDate(holiday.date)} — ${holiday.name}`);
+  } else {
+    lines.push('• No national public holidays are listed for this month.');
+  }
+  lines.push('', 'Any work schedules, staffing arrangements, and office operating plans remain subject to HR and management confirmation. Please coordinate with your immediate supervisor for guidance relevant to your role.', '', 'Thank you.', '', 'Human Resources');
+  return lines.join('\n');
+}
+
+async function getHolidayReport() {
+  const raw = await runNode(HOLIDAY_SCRIPT, ['--report']);
+  return JSON.parse(raw);
+}
+
+async function runManualHolidayCheck() {
+  const report = await getHolidayReport();
+  const state = readHolidayState();
+  state.latestReport = report;
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeHolidayState(state);
+  await sendOutbox(buildHolidayAdvisory(report), [{ label: 'Compose Draft', value: 'compose_holiday_draft' }]);
+}
+
+async function runComposeHolidayDraft() {
+  const state = readHolidayState();
+  const report = state.latestReport ?? await getHolidayReport();
+  const draft = buildHolidayDraft(report);
+  state.latestReport = report;
+  state.draft = draft;
+  state.awaitingEdit = false;
+  writeHolidayState(state);
+  await sendOutbox(draft, [
+    { label: 'Send to Employees', value: 'send_holiday_employees' },
+    { label: 'Edit', value: 'edit_holiday' },
+    { label: 'Discard', value: 'discard_holiday' },
+  ]);
+}
+
+async function runSendHolidayEmployees() {
+  const state = readHolidayState();
+  if (!state.draft) throw new Error('no holiday announcement draft is available');
+  writeFileSync(OUTBOX_PATH, JSON.stringify({ target: ABC_EMPLOYEES, text: state.draft }) + '\n', 'utf8');
+  await runNode(SEND_SCRIPT);
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeHolidayState(state);
+}
+
+async function runBeginHolidayEdit() {
+  const state = readHolidayState();
+  if (!state.draft) return;
+  state.awaitingEdit = true;
+  writeHolidayState(state);
+  await sendOutbox('Reply to this message with your revised announcement.');
+}
+
+async function runDiscardHoliday() {
+  const state = readHolidayState();
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeHolidayState(state);
+  await sendOutbox('Draft discarded.');
+}
+
+async function runRevisedHolidayDraft(revision) {
+  const draft = normalizeRevision(revision);
+  if (!draft) return;
+  const state = readHolidayState();
+  state.draft = draft;
+  state.awaitingEdit = false;
+  writeHolidayState(state);
+  await sendOutbox(draft, [
+    { label: 'Send to Employees', value: 'send_holiday_employees' },
+    { label: 'Edit', value: 'edit_holiday' },
+    { label: 'Discard', value: 'discard_holiday' },
+  ]);
 }
 
 function buildDraft(weather) {
@@ -230,6 +392,68 @@ async function runRevisedDraft(revision) {
   ]);
 }
 
+async function runEarthquakeTemplate() {
+  const state = readEarthquakeState();
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeEarthquakeState(state);
+  await sendOutbox(EARTHQUAKE_ANNOUNCEMENT_TEMPLATE, [
+    { label: 'Compose Draft', value: 'compose_earthquake_draft' },
+  ]);
+}
+
+async function runComposeEarthquakeDraft() {
+  const state = readEarthquakeState();
+  state.draft = EARTHQUAKE_ANNOUNCEMENT_TEMPLATE;
+  state.awaitingEdit = false;
+  writeEarthquakeState(state);
+  await sendOutbox(state.draft, [
+    { label: 'Send to Employees', value: 'send_earthquake_employees' },
+    { label: 'Edit', value: 'edit_earthquake' },
+    { label: 'Discard', value: 'discard_earthquake' },
+  ]);
+}
+
+async function runSendEarthquakeEmployees() {
+  const state = readEarthquakeState();
+  if (!state.draft) throw new Error('no earthquake announcement draft is available');
+  writeFileSync(OUTBOX_PATH, JSON.stringify({ target: ABC_EMPLOYEES, text: state.draft }) + '\n', 'utf8');
+  await runNode(SEND_SCRIPT);
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeEarthquakeState(state);
+}
+
+async function runBeginEarthquakeEdit() {
+  const state = readEarthquakeState();
+  if (!state.draft) return;
+  state.awaitingEdit = true;
+  writeEarthquakeState(state);
+  await sendOutbox('Reply to this message with your revised announcement.');
+}
+
+async function runDiscardEarthquake() {
+  const state = readEarthquakeState();
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeEarthquakeState(state);
+  await sendOutbox('Draft discarded.');
+}
+
+async function runRevisedEarthquakeDraft(revision) {
+  const draft = normalizeRevision(revision);
+  if (!draft) return;
+  const state = readEarthquakeState();
+  state.draft = draft;
+  state.awaitingEdit = false;
+  writeEarthquakeState(state);
+  await sendOutbox(draft, [
+    { label: 'Send to Employees', value: 'send_earthquake_employees' },
+    { label: 'Edit', value: 'edit_earthquake' },
+    { label: 'Discard', value: 'discard_earthquake' },
+  ]);
+}
+
 export default definePluginEntry({
   id: 'hr-single-delivery-guard',
   name: 'HR Single Delivery Guard',
@@ -239,37 +463,93 @@ export default definePluginEntry({
       if (ctx.sessionKey !== HR_DRAFTS_SESSION) return;
       const content = event.content.trim();
       const isWeatherCommand = /^\/check_weather(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
+      // /check_ph_holidays is intentionally handled by the holiday agent prompt,
+      // so manual checks use the same official-source verification as the schedule.
+      const isEarthquakeTemplateCommand = /^\/create_earthquake_announcement(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
+      const isComposeEarthquakeDraft = /(?:callback_data\s*:\s*)?compose_earthquake_draft\b/i.test(content);
+      const isSendEarthquakeEmployees = /(?:callback_data\s*:\s*)?send_earthquake_employees\b/i.test(content);
+      const isEarthquakeEdit = /(?:callback_data\s*:\s*)?edit_earthquake\b/i.test(content);
+      const isEarthquakeDiscard = /(?:callback_data\s*:\s*)?discard_earthquake\b/i.test(content);
       const isComposeDraft = /(?:callback_data\s*:\s*)?compose_draft\b/i.test(content);
+      const isComposeHolidayDraft = /(?:callback_data\s*:\s*)?compose_holiday_draft\b/i.test(content);
       const isSendEmployees = /(?:callback_data\s*:\s*)?send_employees\b/i.test(content);
+      const isSendHolidayEmployees = /(?:callback_data\s*:\s*)?send_holiday_employees\b/i.test(content);
       const isEdit = /(?:callback_data\s*:\s*)?edit\b/i.test(content);
+      const isHolidayEdit = /(?:callback_data\s*:\s*)?edit_holiday\b/i.test(content);
       const isDiscard = /(?:callback_data\s*:\s*)?discard\b/i.test(content);
+      const isHolidayDiscard = /(?:callback_data\s*:\s*)?discard_holiday\b/i.test(content);
       const isCallback = /^callback_data\s*:/i.test(content);
       const isPlainText = Boolean(content) && !isCallback && !content.startsWith('/');
       let isRevision = false;
+      let isHolidayRevision = false;
+      let isEarthquakeRevision = false;
       if (isPlainText) {
         try {
           isRevision = readWorkflowState().awaitingEdit === true;
         } catch {
           isRevision = false;
         }
+        try {
+          isHolidayRevision = readHolidayState().awaitingEdit === true;
+        } catch {
+          isHolidayRevision = false;
+        }
+        try {
+          isEarthquakeRevision = readEarthquakeState().awaitingEdit === true;
+        } catch {
+          isEarthquakeRevision = false;
+        }
       }
-      if (!isWeatherCommand && !isComposeDraft && !isSendEmployees && !isEdit && !isDiscard && !isRevision) return;
+      if (!isWeatherCommand && !isEarthquakeTemplateCommand && !isComposeDraft && !isComposeHolidayDraft && !isComposeEarthquakeDraft && !isSendEmployees && !isSendHolidayEmployees && !isSendEarthquakeEmployees && !isEdit && !isHolidayEdit && !isEarthquakeEdit && !isDiscard && !isHolidayDiscard && !isEarthquakeDiscard && !isRevision && !isHolidayRevision && !isEarthquakeRevision) return;
       try {
         if (isWeatherCommand) {
           await runManualWeatherCheck();
           api.logger.info('sent the single /check_weather advisory without model dispatch');
+        } else if (isEarthquakeTemplateCommand) {
+          await runEarthquakeTemplate();
+          api.logger.info('sent earthquake announcement template without model dispatch');
         } else if (isComposeDraft) {
           await runComposeDraft();
           api.logger.info('sent the draft preview without a redundant confirmation');
+        } else if (isComposeHolidayDraft) {
+          await runComposeHolidayDraft();
+          api.logger.info('sent the holiday draft preview without a redundant confirmation');
+        } else if (isComposeEarthquakeDraft) {
+          await runComposeEarthquakeDraft();
+          api.logger.info('sent the earthquake draft preview without a redundant confirmation');
         } else if (isSendEmployees) {
           await runSendEmployees();
           api.logger.info('sent employee announcement without a monitoring prompt');
+        } else if (isSendHolidayEmployees) {
+          await runSendHolidayEmployees();
+          api.logger.info('sent holiday employee announcement without a confirmation');
+        } else if (isSendEarthquakeEmployees) {
+          await runSendEarthquakeEmployees();
+          api.logger.info('sent earthquake employee announcement without a confirmation');
         } else if (isEdit) {
           await runBeginEdit();
           api.logger.info('opened edit mode without model dispatch');
+        } else if (isHolidayEdit) {
+          await runBeginHolidayEdit();
+          api.logger.info('opened holiday edit mode without model dispatch');
+        } else if (isEarthquakeEdit) {
+          await runBeginEarthquakeEdit();
+          api.logger.info('opened earthquake edit mode without model dispatch');
         } else if (isDiscard) {
           await runDiscard();
           api.logger.info('discarded draft without model dispatch');
+        } else if (isHolidayDiscard) {
+          await runDiscardHoliday();
+          api.logger.info('discarded holiday draft without model dispatch');
+        } else if (isEarthquakeDiscard) {
+          await runDiscardEarthquake();
+          api.logger.info('discarded earthquake draft without model dispatch');
+        } else if (isHolidayRevision) {
+          await runRevisedHolidayDraft(content);
+          api.logger.info('sent revised holiday draft preview without a redundant confirmation');
+        } else if (isEarthquakeRevision) {
+          await runRevisedEarthquakeDraft(content);
+          api.logger.info('sent revised earthquake draft preview without a redundant confirmation');
         } else if (isRevision) {
           await runRevisedDraft(content);
           api.logger.info('sent revised draft preview without a redundant confirmation');

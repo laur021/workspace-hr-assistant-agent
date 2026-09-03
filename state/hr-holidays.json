@@ -1,0 +1,17 @@
+{
+  "lastSentMonth": "2026-09",
+  "lastSentAt": "2026-09-03T02:19:15.785Z",
+  "latestReport": {
+    "country": "PH",
+    "timezone": "Asia/Manila",
+    "year": 2026,
+    "month": 9,
+    "monthKey": "2026-09",
+    "monthLabel": "September 2026",
+    "fetchedAt": "2026-09-03T02:19:06.258Z",
+    "source": "https://date.nager.at/api/v3/PublicHolidays/2026/PH",
+    "holidays": []
+  },
+  "draft": null,
+  "awaitingEdit": false
+}

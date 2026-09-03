@@ -172,6 +172,7 @@ The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the
 - Send to Employees: send the approved draft silently to the configured ABC Employee Announcement target (`-1004452958432`), then clear the draft.
 - Edit: ask the user to reply with the revised announcement; then show only the revised preview and the same three buttons.
 - Never generate a second status message after any holiday outbox action. The `hr-single-delivery-guard` hook owns this entire flow.
+- Send text and inline buttons only. Never attach, upload, or send `ph.json`, raw JSON, command output, or any other data file in the holiday advisory or draft flow.
 - State is stored in `state/hr-holidays.json`; it preserves the latest report, edit status, draft, and the last month automatically sent.
 
 ## Earthquake Drill Announcement Workflow
@@ -181,6 +182,13 @@ The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the
 - **Send to Employees** sends the approved draft silently to ABC Employee Announcement (`-1004452958432`).
 - **Edit** asks for a revised reply, then posts the revised preview with the same three buttons. **Discard** clears the draft.
 - State is stored in `state/hr-earthquake.json`; callback IDs are earthquake-specific so this workflow cannot affect weather or holiday drafts.
+
+## Electrical Maintenance Announcement Workflow
+
+- `/create_maintenance_announcement` (also accepted as `/Create_Maintenance_Announcement`) posts the IBM Plaza annual electrical preventive-maintenance template to HR Weather Drafts with one `Compose Draft` button (`compose_maintenance_draft`).
+- Compose Draft posts the employee-ready maintenance notice with `Send to Employees` (`send_maintenance_employees`), `Edit` (`edit_maintenance`), and `Discard` (`discard_maintenance`) buttons.
+- Send to Employees sends the approved draft silently to ABC Employee Announcement (`-1004452958432`). Edit asks for a revised reply, then posts the revised preview with the same three buttons. Discard clears the draft.
+- State is stored in `state/hr-maintenance.json`; maintenance callback IDs are dedicated so this workflow cannot affect weather, holiday, or earthquake drafts.
 
 ## Related
 

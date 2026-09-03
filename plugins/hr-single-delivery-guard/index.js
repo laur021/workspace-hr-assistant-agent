@@ -11,6 +11,7 @@ const OUTBOX_PATH = `${WORKSPACE}\\state\\outbox.json`;
 const STATE_PATH = `${WORKSPACE}\\state\\hr-weather.json`;
 const HOLIDAY_STATE_PATH = `${WORKSPACE}\\state\\hr-holidays.json`;
 const EARTHQUAKE_STATE_PATH = `${WORKSPACE}\\state\\hr-earthquake.json`;
+const MAINTENANCE_STATE_PATH = `${WORKSPACE}\\state\\hr-maintenance.json`;
 const HR_DRAFTS = '-1003702195046';
 const ABC_EMPLOYEES = '-1004452958432';
 
@@ -37,6 +38,33 @@ const EARTHQUAKE_ANNOUNCEMENT_TEMPLATE = [
   '',
   'Thank you and best regards,',
   'HR Department',
+].join('\n');
+
+const MAINTENANCE_ANNOUNCEMENT_TEMPLATE = [
+  'SUBJECT: Annual Electrical Preventive Maintenance Advisory',
+  '',
+  'Hi Everyone,',
+  '',
+  'This is to inform you that IBM Plaza will be conducting its Annual Electrical Preventive Maintenance on Saturday, September 27, 2025, from 8:00 AM to 9:00 PM.',
+  '',
+  'Please be guided by the following schedule:',
+  '',
+  '8:00 AM – 10:00 AM (2 Hours) — TOTAL POWER SHUTDOWN',
+  '• No electricity on all floors from B3 to 32F.',
+  '• Elevators will not be operational during this period.',
+  '',
+  '10:00 AM – 8:00 PM — GENERATOR POWER SUPPLY',
+  '• All floors will have electricity supplied by the building’s generator set.',
+  '',
+  '8:00 PM – 9:00 PM — MINOR POWER FLUCTUATIONS EXPECTED',
+  '• Minor power fluctuations may occur during the transfer from backup power (genset) to Meralco supply.',
+  '',
+  'For further details, please refer to the attached circular.',
+  '',
+  'Thank you for your kind attention and cooperation.',
+  '',
+  'Best Regards,',
+  'Admin Department',
 ].join('\n');
 
 function prettyNumber(value) {
@@ -90,6 +118,19 @@ function readEarthquakeState() {
 
 function writeEarthquakeState(state) {
   writeFileSync(EARTHQUAKE_STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
+}
+
+function readMaintenanceState() {
+  try {
+    return JSON.parse(readFileSync(MAINTENANCE_STATE_PATH, 'utf8').replace(/^\uFEFF/, ''));
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    return { draft: null, awaitingEdit: false };
+  }
+}
+
+function writeMaintenanceState(state) {
+  writeFileSync(MAINTENANCE_STATE_PATH, JSON.stringify(state, null, 2) + '\n', 'utf8');
 }
 
 async function sendOutbox(text, buttons = []) {
@@ -454,6 +495,68 @@ async function runRevisedEarthquakeDraft(revision) {
   ]);
 }
 
+async function runMaintenanceTemplate() {
+  const state = readMaintenanceState();
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeMaintenanceState(state);
+  await sendOutbox(MAINTENANCE_ANNOUNCEMENT_TEMPLATE, [
+    { label: 'Compose Draft', value: 'compose_maintenance_draft' },
+  ]);
+}
+
+async function runComposeMaintenanceDraft() {
+  const state = readMaintenanceState();
+  state.draft = MAINTENANCE_ANNOUNCEMENT_TEMPLATE;
+  state.awaitingEdit = false;
+  writeMaintenanceState(state);
+  await sendOutbox(state.draft, [
+    { label: 'Send to Employees', value: 'send_maintenance_employees' },
+    { label: 'Edit', value: 'edit_maintenance' },
+    { label: 'Discard', value: 'discard_maintenance' },
+  ]);
+}
+
+async function runSendMaintenanceEmployees() {
+  const state = readMaintenanceState();
+  if (!state.draft) throw new Error('no maintenance announcement draft is available');
+  writeFileSync(OUTBOX_PATH, JSON.stringify({ target: ABC_EMPLOYEES, text: state.draft }) + '\n', 'utf8');
+  await runNode(SEND_SCRIPT);
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeMaintenanceState(state);
+}
+
+async function runBeginMaintenanceEdit() {
+  const state = readMaintenanceState();
+  if (!state.draft) return;
+  state.awaitingEdit = true;
+  writeMaintenanceState(state);
+  await sendOutbox('Reply to this message with your revised announcement.');
+}
+
+async function runDiscardMaintenance() {
+  const state = readMaintenanceState();
+  state.draft = null;
+  state.awaitingEdit = false;
+  writeMaintenanceState(state);
+  await sendOutbox('Draft discarded.');
+}
+
+async function runRevisedMaintenanceDraft(revision) {
+  const draft = normalizeRevision(revision);
+  if (!draft) return;
+  const state = readMaintenanceState();
+  state.draft = draft;
+  state.awaitingEdit = false;
+  writeMaintenanceState(state);
+  await sendOutbox(draft, [
+    { label: 'Send to Employees', value: 'send_maintenance_employees' },
+    { label: 'Edit', value: 'edit_maintenance' },
+    { label: 'Discard', value: 'discard_maintenance' },
+  ]);
+}
+
 export default definePluginEntry({
   id: 'hr-single-delivery-guard',
   name: 'HR Single Delivery Guard',
@@ -466,10 +569,15 @@ export default definePluginEntry({
       // /check_ph_holidays is intentionally handled by the holiday agent prompt,
       // so manual checks use the same official-source verification as the schedule.
       const isEarthquakeTemplateCommand = /^\/create_earthquake_announcement(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
+      const isMaintenanceTemplateCommand = /^\/create_maintenance_announcement(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(content);
       const isComposeEarthquakeDraft = /(?:callback_data\s*:\s*)?compose_earthquake_draft\b/i.test(content);
       const isSendEarthquakeEmployees = /(?:callback_data\s*:\s*)?send_earthquake_employees\b/i.test(content);
       const isEarthquakeEdit = /(?:callback_data\s*:\s*)?edit_earthquake\b/i.test(content);
       const isEarthquakeDiscard = /(?:callback_data\s*:\s*)?discard_earthquake\b/i.test(content);
+      const isComposeMaintenanceDraft = /(?:callback_data\s*:\s*)?compose_maintenance_draft\b/i.test(content);
+      const isSendMaintenanceEmployees = /(?:callback_data\s*:\s*)?send_maintenance_employees\b/i.test(content);
+      const isMaintenanceEdit = /(?:callback_data\s*:\s*)?edit_maintenance\b/i.test(content);
+      const isMaintenanceDiscard = /(?:callback_data\s*:\s*)?discard_maintenance\b/i.test(content);
       const isComposeDraft = /(?:callback_data\s*:\s*)?compose_draft\b/i.test(content);
       const isComposeHolidayDraft = /(?:callback_data\s*:\s*)?compose_holiday_draft\b/i.test(content);
       const isSendEmployees = /(?:callback_data\s*:\s*)?send_employees\b/i.test(content);
@@ -483,6 +591,7 @@ export default definePluginEntry({
       let isRevision = false;
       let isHolidayRevision = false;
       let isEarthquakeRevision = false;
+      let isMaintenanceRevision = false;
       if (isPlainText) {
         try {
           isRevision = readWorkflowState().awaitingEdit === true;
@@ -499,8 +608,13 @@ export default definePluginEntry({
         } catch {
           isEarthquakeRevision = false;
         }
+        try {
+          isMaintenanceRevision = readMaintenanceState().awaitingEdit === true;
+        } catch {
+          isMaintenanceRevision = false;
+        }
       }
-      if (!isWeatherCommand && !isEarthquakeTemplateCommand && !isComposeDraft && !isComposeHolidayDraft && !isComposeEarthquakeDraft && !isSendEmployees && !isSendHolidayEmployees && !isSendEarthquakeEmployees && !isEdit && !isHolidayEdit && !isEarthquakeEdit && !isDiscard && !isHolidayDiscard && !isEarthquakeDiscard && !isRevision && !isHolidayRevision && !isEarthquakeRevision) return;
+      if (!isWeatherCommand && !isEarthquakeTemplateCommand && !isMaintenanceTemplateCommand && !isComposeDraft && !isComposeHolidayDraft && !isComposeEarthquakeDraft && !isComposeMaintenanceDraft && !isSendEmployees && !isSendHolidayEmployees && !isSendEarthquakeEmployees && !isSendMaintenanceEmployees && !isEdit && !isHolidayEdit && !isEarthquakeEdit && !isMaintenanceEdit && !isDiscard && !isHolidayDiscard && !isEarthquakeDiscard && !isMaintenanceDiscard && !isRevision && !isHolidayRevision && !isEarthquakeRevision && !isMaintenanceRevision) return;
       try {
         if (isWeatherCommand) {
           await runManualWeatherCheck();
@@ -508,6 +622,9 @@ export default definePluginEntry({
         } else if (isEarthquakeTemplateCommand) {
           await runEarthquakeTemplate();
           api.logger.info('sent earthquake announcement template without model dispatch');
+        } else if (isMaintenanceTemplateCommand) {
+          await runMaintenanceTemplate();
+          api.logger.info('sent maintenance announcement template without model dispatch');
         } else if (isComposeDraft) {
           await runComposeDraft();
           api.logger.info('sent the draft preview without a redundant confirmation');
@@ -517,6 +634,9 @@ export default definePluginEntry({
         } else if (isComposeEarthquakeDraft) {
           await runComposeEarthquakeDraft();
           api.logger.info('sent the earthquake draft preview without a redundant confirmation');
+        } else if (isComposeMaintenanceDraft) {
+          await runComposeMaintenanceDraft();
+          api.logger.info('sent the maintenance draft preview without a redundant confirmation');
         } else if (isSendEmployees) {
           await runSendEmployees();
           api.logger.info('sent employee announcement without a monitoring prompt');
@@ -526,6 +646,9 @@ export default definePluginEntry({
         } else if (isSendEarthquakeEmployees) {
           await runSendEarthquakeEmployees();
           api.logger.info('sent earthquake employee announcement without a confirmation');
+        } else if (isSendMaintenanceEmployees) {
+          await runSendMaintenanceEmployees();
+          api.logger.info('sent maintenance employee announcement without a confirmation');
         } else if (isEdit) {
           await runBeginEdit();
           api.logger.info('opened edit mode without model dispatch');
@@ -535,6 +658,9 @@ export default definePluginEntry({
         } else if (isEarthquakeEdit) {
           await runBeginEarthquakeEdit();
           api.logger.info('opened earthquake edit mode without model dispatch');
+        } else if (isMaintenanceEdit) {
+          await runBeginMaintenanceEdit();
+          api.logger.info('opened maintenance edit mode without model dispatch');
         } else if (isDiscard) {
           await runDiscard();
           api.logger.info('discarded draft without model dispatch');
@@ -544,12 +670,18 @@ export default definePluginEntry({
         } else if (isEarthquakeDiscard) {
           await runDiscardEarthquake();
           api.logger.info('discarded earthquake draft without model dispatch');
+        } else if (isMaintenanceDiscard) {
+          await runDiscardMaintenance();
+          api.logger.info('discarded maintenance draft without model dispatch');
         } else if (isHolidayRevision) {
           await runRevisedHolidayDraft(content);
           api.logger.info('sent revised holiday draft preview without a redundant confirmation');
         } else if (isEarthquakeRevision) {
           await runRevisedEarthquakeDraft(content);
           api.logger.info('sent revised earthquake draft preview without a redundant confirmation');
+        } else if (isMaintenanceRevision) {
+          await runRevisedMaintenanceDraft(content);
+          api.logger.info('sent revised maintenance draft preview without a redundant confirmation');
         } else if (isRevision) {
           await runRevisedDraft(content);
           api.logger.info('sent revised draft preview without a redundant confirmation');

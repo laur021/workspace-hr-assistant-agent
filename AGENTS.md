@@ -137,6 +137,8 @@ You operate the AblazeHRAssistantBot (Telegram account `hr-assistant`) for HR we
 - HR Weather Drafts group: `-1003702195046` (interactive — buttons + replies land here)
 - ABC Employee Announcement group: `-1004452958432` (send-only)
 
+**Uniform employee-draft format:** Every employee announcement draft produced by a command or automation (weather, public holidays, earthquake, electrical maintenance, or IBM generator) must use this order: plain subject line; blank line; greeting; blank line; announcement content; blank line; closing and signature. Never prefix the subject with `SUBJECT:` or `Subject:`, and do not add section labels such as `Greetings:`, `Content:`, or `End greetings:`. Edited/revised previews must follow the same format.
+
 **State** lives at `C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\state\hr-weather.json`. Read it with the `read` tool; update it with the `write` tool, preserving every field. Fields: `monitoring` (bool), `monitoringDate` (YYYY-MM-DD, Asia/Manila), `lastSentLevel` (0–3), `lastSentAt` (ISO timestamp|null), `lastWeatherSignature` (string|null), `draft` (string|null), `awaitingEdit` (bool).
 
 **Send a message with buttons — ALWAYS via outbox, never inline JSON:**

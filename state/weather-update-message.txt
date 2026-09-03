@@ -56,7 +56,7 @@ Recommendation:
 [Give a practical, neutral travel-safety recommendation. State that HR may consider dress-down only if heavy rain, flooding risk, strong winds, or travel disruption supports it.]
 
 Suggested employee announcement:
-[Write a concise, professional employee-ready announcement based only on the verified details. Tell employees to allow extra travel time and prioritize safety. Do not announce class/work suspension, office closure, work-from-home, or any management decision.]
+[Write a concise, professional employee-ready announcement based only on the verified details. Use this exact structure: a plain subject line (without "SUBJECT:" or "Subject:"), a blank line, a greeting, a blank line, the announcement content, a blank line, and a closing/signature. Do not include section labels such as "Subject:", "Greetings:", "Content:", or "End greetings:". Tell employees to allow extra travel time and prioritize safety. Do not announce class/work suspension, office closure, work-from-home, or any management decision.]
 
 For manual `/check_weather` advisories, include this compact block in the advisory itself (not as a second bot message), immediately before the Compose Draft question:
 

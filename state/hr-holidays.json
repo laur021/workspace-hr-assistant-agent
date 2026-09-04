@@ -1,6 +1,6 @@
 {
   "lastSentMonth": "2026-09",
-  "lastSentAt": "2026-09-03T02:19:15.785Z",
+  "lastSentAt": "2026-09-03T06:38:10.868Z",
   "latestReport": {
     "country": "PH",
     "timezone": "Asia/Manila",
@@ -8,10 +8,14 @@
     "month": 9,
     "monthKey": "2026-09",
     "monthLabel": "September 2026",
-    "fetchedAt": "2026-09-03T04:58:57.842Z",
+    "fetchedAt": "2026-09-03T06:38:10.868Z",
     "source": "https://date.nager.at/api/v3/PublicHolidays/2026/PH",
+    "officialSource": {
+      "name": "Official Gazette — Proclamation No. 1006, s. 2025",
+      "url": "https://www.officialgazette.gov.ph/2025/09/25/proclamation-no-1006-s-2025/"
+    },
     "holidays": []
   },
   "draft": "Philippine Public Holiday Notice — September 2026\n\nDear ABC Employees,\n\nPlease be informed of the following Philippine public holidays falling in September 2026:\n\n• No national public holidays are listed for this month.\n\nAny work schedules, staffing arrangements, and office operating plans remain subject to HR and management confirmation. Please coordinate with your immediate supervisor for guidance relevant to your role.\n\nThank you.\n\nHuman Resources",
   "awaitingEdit": false
-}
+}\n

@@ -7,11 +7,11 @@
   },
   "sendThreshold": 2,
   "monitoring": true,
-  "monitoringDate": "2026-09-03",
-  "lastSentLevel": 3,
-  "lastSentAt": "2026-09-03T01:45:19.522Z",
-  "lastAdvisoryMessageId": "257",
-  "draft": "Weather Update and Dress-Down Recommendation — Metro Manila\n\nGood day, ABC team.\n\nAs of Thursday, September 3, 2026, Metro Manila is experiencing thunderstorm. Current conditions are 29.4°C (feels like 33.6°C), with 77% humidity. Winds are approximately 27.2 km/h, with gusts up to 74.5 km/h. Today’s forecast calls for thunderstorms, around 16.9 mm of rain, gusts up to 74.5 km/h, and temperatures from 26.1°C to 29.4°C.\n\nNo verified PAGASA advisory was available from this automated check.\n\nGiven these severe weather conditions, employees should allow extra travel time and prioritize safety while commuting. Employees who need to report on-site may dress down in casual, comfortable, and weather-appropriate attire.\n\nStay safe and coordinate with your immediate supervisor regarding your schedule.\n\nThank you and best regards,\nHuman Resources",
+  "monitoringDate": "2026-09-04",
+  "lastSentLevel": 2,
+  "lastSentAt": "2026-09-04T00:11:23.445Z",
+  "lastAdvisoryMessageId": "313",
+  "draft": null,
   "awaitingEdit": false,
   "lastWeatherSignature": "2026-09-03|thunderstorms|16.9mm|gust74.5kmh|slight-rain-showers"
 }

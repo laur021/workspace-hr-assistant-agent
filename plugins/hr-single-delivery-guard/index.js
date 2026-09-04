@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { definePluginEntry } from 'openclaw/plugin-sdk/plugin-entry';
 
-const HR_DRAFTS_SESSION = 'agent:hr-assistant-agent:telegram:group:-1003702195046';
+const HR_DRAFTS_SESSION = 'agent:hr-assistant-agent:telegram:group:-5201015104';
 const WORKSPACE = 'C:\\Users\\markmb\\.openclaw\\workspace-hr-assistant-agent';
 const WEATHER_SCRIPT = `${WORKSPACE}\\scripts\\hr-weather-check.mjs`;
 const HOLIDAY_SCRIPT = `${WORKSPACE}\\scripts\\hr-holiday-check.mjs`;
@@ -19,8 +19,8 @@ const FLU_STATE_PATH = `${WORKSPACE}\\state\\hr-flu.json`;
 const BIRTHDAY_STATE_PATH = `${WORKSPACE}\\state\\hr-birthday.json`;
 const LAST_FILING_STATE_PATH = `${WORKSPACE}\\state\\hr-last-filing.json`;
 const ANNOUNCEMENT_STATE_PATH = `${WORKSPACE}\\state\\hr-announcement.json`;
-const HR_DRAFTS = '-1003702195046';
-const ABC_EMPLOYEES = '-1004452958432';
+const HR_DRAFTS = '-5201015104';
+const ABC_EMPLOYEES = '-5363691699';
 
 const EARTHQUAKE_ANNOUNCEMENT_TEMPLATE = [
   'Earthquake Drill Advisory',

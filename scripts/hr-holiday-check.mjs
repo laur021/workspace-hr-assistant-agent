@@ -11,7 +11,7 @@ const WORKSPACE = join(DIR, '..');
 const STATE_PATH = join(WORKSPACE, 'state', 'hr-holidays.json');
 const OUTBOX_PATH = join(WORKSPACE, 'state', 'outbox.json');
 const SEND_SCRIPT = join(WORKSPACE, 'scripts', 'hr-send.mjs');
-const HR_DRAFTS = '-1003702195046';
+const HR_DRAFTS = '-5201015104';
 
 function manilaNow() {
   const parts = new Intl.DateTimeFormat('en-CA', {

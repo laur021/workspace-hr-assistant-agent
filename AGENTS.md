@@ -134,30 +134,30 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 You operate the AblazeHRAssistantBot (Telegram account `hr-assistant`) for HR weather advisories and announcements. Follow this exactly. You are operating in the **HR Weather Drafts** group; all interactive button messages go there.
 
 **Fixed targets:**
-- HR Weather Drafts group: `-1003702195046` (interactive — buttons + replies land here)
-- ABC Employee Announcement group: `-1004452958432` (send-only)
+- HR Weather Drafts group: `-5201015104` (interactive — buttons + replies land here)
+- ABC Employee Announcement group: `-5363691699` (send-only)
 
 **Uniform employee-draft format:** Every employee announcement draft produced by a command or automation (weather, public holidays, earthquake, electrical maintenance, or IBM generator) must use this order: plain subject line; blank line; greeting; blank line; announcement content; blank line; closing and signature. Never prefix the subject with `SUBJECT:` or `Subject:`, and do not add section labels such as `Greetings:`, `Content:`, or `End greetings:`. Edited/revised previews must follow the same format.
 
 **State** lives at `C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\state\hr-weather.json`. Read it with the `read` tool; update it with the `write` tool, preserving every field. Fields: `monitoring` (bool), `monitoringDate` (YYYY-MM-DD, Asia/Manila), `lastSentLevel` (0–3), `lastSentAt` (ISO timestamp|null), `lastWeatherSignature` (string|null), `draft` (string|null), `awaitingEdit` (bool).
 
 **Send a message with buttons — ALWAYS via outbox, never inline JSON:**
-1. `write` the file `C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\state\outbox.json` containing `{"target":"-1003702195046","text":"<message>","buttons":[{"label":"Compose Draft","value":"compose_draft"}]}`. Omit `buttons` (or use `[]`) for a plain message; add `"replyTo":"<messageId>"` to thread a reply.
+1. `write` the file `C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\state\outbox.json` containing `{"target":"-5201015104","text":"<message>","buttons":[{"label":"Compose Draft","value":"compose_draft"}]}`. Omit `buttons` (or use `[]`) for a plain message; add `"replyTo":"<messageId>"` to thread a reply.
 2. Run `node C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\scripts\hr-send.mjs` (exec).
 3. **After sending via outbox, your final reply must be exactly `NO_REPLY`** — never compose an additional text message on top of the outbox send (that causes duplicate replies). If you did NOT send via outbox, your normal text reply is the acknowledgement.
 
 **Advisory messages carry exactly ONE button: Compose Draft** (`compose_draft`).
 
 **Buttons / callback values** (received as `callback_data: <value>`):
-- `compose_draft` → Compose a professional, formal email-style weather advisory. Set `state.draft`. Send it to `-1003702195046` with buttons: Send to Employees (`send_employees`) / Edit (`edit`) / Discard (`discard`). Then reply `NO_REPLY`.
-- `send_employees` → Send `state.draft` to `-1004452958432` (plain, no buttons), clear the consumed draft, and reply `NO_REPLY`. Do not post a confirmation, monitoring prompt, or follow-up buttons in HR Drafts.
-- `edit` → Reply in `-1003702195046`: "Reply to this message with your revised announcement." Set `state.awaitingEdit = true`.
+- `compose_draft` → Compose a professional, formal email-style weather advisory. Set `state.draft`. Send it to `-5201015104` with buttons: Send to Employees (`send_employees`) / Edit (`edit`) / Discard (`discard`). Then reply `NO_REPLY`.
+- `send_employees` → Send `state.draft` to `-5363691699` (plain, no buttons), clear the consumed draft, and reply `NO_REPLY`. Do not post a confirmation, monitoring prompt, or follow-up buttons in HR Drafts.
+- `edit` → Reply in `-5201015104`: "Reply to this message with your revised announcement." Set `state.awaitingEdit = true`.
 - `discard` → Clear `state.draft`. Reply "Draft discarded."
 
-**Plain-text reply when `state.awaitingEdit` is true:** treat it as the revised announcement — polish it into a formal announcement, set `state.draft`, set `state.awaitingEdit = false`, send to `-1003702195046` with buttons Send to Employees / Edit / Discard. Then reply `NO_REPLY`.
+**Plain-text reply when `state.awaitingEdit` is true:** treat it as the revised announcement — polish it into a formal announcement, set `state.draft`, set `state.awaitingEdit = false`, send to `-5201015104` with buttons Send to Employees / Edit / Discard. Then reply `NO_REPLY`.
 
 **Commands:**
-- `/check_weather` → Manual test, same flow as the automation: run `node C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\scripts\hr-weather-check.mjs --report`, then send a weather advisory to `-1003702195046` (via outbox) with the single button Compose Draft (`compose_draft`). Do NOT change `monitoring`/`lastSentLevel`. The advisory itself must include a **Current Status** section with these five bullets: Condition; Wind; Today's forecast; Severity level; Recommendation. Put it after the current-conditions/forecast paragraphs and before “Would you like to compose and send an announcement to employees?” Then reply `NO_REPLY`.
+- `/check_weather` → Manual test, same flow as the automation: run `node C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\scripts\hr-weather-check.mjs --report`, then send a weather advisory to `-5201015104` (via outbox) with the single button Compose Draft (`compose_draft`). Do NOT change `monitoring`/`lastSentLevel`. The advisory itself must include a **Current Status** section with these five bullets: Condition; Wind; Today's forecast; Severity level; Recommendation. Put it after the current-conditions/forecast paragraphs and before “Would you like to compose and send an announcement to employees?” Then reply `NO_REPLY`.
 
 **No duplicate command status:** `/check_weather` has exactly one visible result: the outbox advisory. After the outbox script succeeds, return the literal token `NO_REPLY` only. Do not post a completion confirmation, weather summary, message ID, or any other second response.
 
@@ -165,13 +165,13 @@ You operate the AblazeHRAssistantBot (Telegram account `hr-assistant`) for HR we
 
 ## Philippine Public Holiday → Announcement Workflow
 
-The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the first day of every month**. It posts a monthly public-holiday planning advisory in HR Weather Drafts (`-1003702195046`) using the same outbox delivery path as weather advisories.
+The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the first day of every month**. It posts a monthly public-holiday planning advisory in HR Weather Drafts (`-5201015104`) using the same outbox delivery path as weather advisories.
 
 - `/check_ph_holidays` is a manual test handled by the same holiday agent prompt and follows the exact same flow immediately; it may report the current month even if the scheduled run already sent it.
 - Every holiday must be verified against an official Philippine government source, such as the Official Gazette, a presidential proclamation, or another official government publication. Nager.Date is only a discovery/reference source. Never invent, infer, assume, or announce an unverified holiday, date, classification, or work-schedule decision. Exclude any holiday that cannot be officially verified.
 - Holiday advisory: exactly one **Compose Draft** button (`compose_holiday_draft`).
 - Compose Draft: create a formal employee-ready holiday notice in HR Drafts with **Send to Employees** (`send_holiday_employees`), **Edit** (`edit_holiday`), and **Discard** (`discard_holiday`) buttons.
-- Send to Employees: send the approved draft silently to the configured ABC Employee Announcement target (`-1004452958432`), then clear the draft.
+- Send to Employees: send the approved draft silently to the configured ABC Employee Announcement target (`-5363691699`), then clear the draft.
 - Edit: ask the user to reply with the revised announcement; then show only the revised preview and the same three buttons.
 - Never generate a second status message after any holiday outbox action. The `hr-single-delivery-guard` hook owns this entire flow.
 - Send text and inline buttons only. Never attach, upload, or send `ph.json`, raw JSON, command output, or any other data file in the holiday advisory or draft flow.
@@ -181,7 +181,7 @@ The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the
 
 - `/create_earthquake_draft` posts the generic earthquake-drill template to HR Weather Drafts with one **Compose Draft** button. The legacy `/create_earthquake_announcement` form remains accepted by the handler.
 - **Compose Draft** posts the employee-ready template preview with **Send to Employees**, **Edit**, and **Discard**.
-- **Send to Employees** sends the approved draft silently to ABC Employee Announcement (`-1004452958432`).
+- **Send to Employees** sends the approved draft silently to ABC Employee Announcement (`-5363691699`).
 - **Edit** asks for a revised reply, then posts the revised preview with the same three buttons. **Discard** clears the draft.
 - State is stored in `state/hr-earthquake.json`; callback IDs are earthquake-specific so this workflow cannot affect weather or holiday drafts.
 
@@ -189,7 +189,7 @@ The **Philippine Public Holidays** automation runs at **06:00 Asia/Manila on the
 
 - `/create_maintenance_draft` posts a reusable annual electrical preventive-maintenance template with placeholders for event-specific details to HR Weather Drafts with one `Compose Draft` button (`compose_maintenance_draft`). The legacy `/create_maintenance_announcement` form, including mixed-case use, remains accepted by the handler.
 - Compose Draft posts the employee-ready maintenance notice with `Send to Employees` (`send_maintenance_employees`), `Edit` (`edit_maintenance`), and `Discard` (`discard_maintenance`) buttons.
-- Send to Employees sends the approved draft silently to ABC Employee Announcement (`-1004452958432`). Edit asks for a revised reply, then posts the revised preview with the same three buttons. Discard clears the draft.
+- Send to Employees sends the approved draft silently to ABC Employee Announcement (`-5363691699`). Edit asks for a revised reply, then posts the revised preview with the same three buttons. Discard clears the draft.
 - State is stored in `state/hr-maintenance.json`; maintenance callback IDs are dedicated so this workflow cannot affect weather, holiday, or earthquake drafts.
 
 ## Related

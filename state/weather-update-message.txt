@@ -6,7 +6,7 @@ Purpose:
 Send weather advisory drafts to the HR Drafts Telegram group only. This is for HR review and is not an automatic employee announcement.
 
 Destination:
-Send the advisory only to the HR Drafts group (-1003702195046).
+Send the advisory only to the [Test] HR Drafts group (-5201015104).
 Never send directly to the employee group. That only happens when HR taps "Send to Employees" on a draft.
 Never make decisions about office closure, work-from-home, suspension of work, or cancellation of operations.
 
@@ -35,8 +35,8 @@ Do not send a Telegram message when:
 Exception to the 3-hour duplicate rule:
 Send an updated draft if the weather becomes materially worse, the expected timing changes significantly, a new official warning is issued, or a tropical cyclone update becomes available.
 
-For each valid alert, compose ONE advisory message (content below), then send it to the HR Drafts group (-1003702195046) using the outbox pattern from AGENTS.md "HR Weather -> Announcement Workflow":
-1. Write the file C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\state\outbox.json with {"target":"-1003702195046","text":"<advisory text>","buttons":[{"label":"Compose Draft","value":"compose_draft"}]}.
+For each valid alert, compose ONE advisory message (content below), then send it to the [Test] HR Drafts group (-5201015104) using the outbox pattern from AGENTS.md "HR Weather -> Announcement Workflow":
+1. Write the file C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\state\outbox.json with {"target":"-5201015104","text":"<advisory text>","buttons":[{"label":"Compose Draft","value":"compose_draft"}]}.
 2. Run node C:\Users\markmb\.openclaw\workspace-hr-assistant-agent\scripts\hr-send.mjs.
 3. Reply exactly NO_REPLY (the outbox send is the deliverable; never add a second text message).
 

@@ -9,9 +9,9 @@
   "monitoring": true,
   "monitoringDate": "2026-09-04",
   "lastSentLevel": 2,
-  "lastSentAt": "2026-09-04T00:11:23.445Z",
+  "lastSentAt": "2026-09-04T02:14:14.505Z",
   "lastAdvisoryMessageId": "313",
   "draft": null,
   "awaitingEdit": false,
-  "lastWeatherSignature": "2026-09-03|thunderstorms|16.9mm|gust74.5kmh|slight-rain-showers"
+  "lastWeatherSignature": "2026-09-04|overcast|18.6mm|gust66.2kmh|heavy-rain-strong-wind"
 }

@@ -24,8 +24,8 @@ const LOCATION = {
   tz: 'Asia/Manila',
 };
 
-const HR_DRAFTS = '-1003702195046';      // HR Weather Drafts (supergroup)
-const ABC_EMPLOYEES = '-1004452958432';  // ABC Employee Announcement (supergroup)
+const HR_DRAFTS = '-5201015104';      // [Test] HR Drafts
+const ABC_EMPLOYEES = '-5363691699';  // [Test] ABC Announcement
 const SEND_THRESHOLD = 2;             // advisory fires when severity >= 2
 const PAGASA_NCR_URL = 'https://www.pagasa.dost.gov.ph/regional-forecast/ncrprsd';
 
